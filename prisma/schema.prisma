@@ -1,0 +1,584 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum ListingType {
+  SERVICE
+  PRODUCT
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  PAUSED
+  REJECTED
+}
+
+enum PackageTier {
+  BASIC
+  STANDARD
+  PREMIUM
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIAL_REFUND
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+}
+
+enum DisputeResolution {
+  REFUND
+  RELEASE
+  PARTIAL_REFUND
+}
+
+enum NotificationType {
+  ORDER_UPDATE
+  MESSAGE
+  REVIEW
+  PAYOUT
+  LISTING_UPDATE
+  DISPUTE
+  SYSTEM
+}
+
+// ============================================================
+// AUTH.JS MODELS
+// ============================================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================================
+// USER & SELLER
+// ============================================================
+
+model User {
+  id            String     @id @default(cuid())
+  name          String
+  email         String     @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  image         String?
+  role          Role       @default(BUYER)
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  accounts      Account[]
+  sellerProfile SellerProfile?
+  orders        Order[]         @relation("BuyerOrders")
+  reviews       Review[]
+  cartItems     CartItem[]
+  notifications Notification[]
+  sentMessages  OrderMessage[]
+  adminLogs     AdminLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+}
+
+model SellerProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  storeName          String
+  slug               String             @unique
+  bio                String?            @db.Text
+  banner             String?
+  primaryCategory    String?
+  portfolioLinks     String[]
+  stripeAccountId    String?
+  stripeOnboarded    Boolean            @default(false)
+  rating             Float?
+  reviewCount        Int                @default(0)
+  completedOrders    Int                @default(0)
+  approvedListings   Int                @default(0)
+  verificationStatus String             @default("UNVERIFIED")
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listings  Listing[]
+  payouts   Payout[]
+  disputes  Dispute[]   @relation("SellerDisputes")
+  orderItems OrderItem[] @relation("SellerOrderItems")
+
+  @@index([slug])
+  @@index([stripeAccountId])
+}
+
+// ============================================================
+// CATEGORIES & TAGS
+// ============================================================
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  icon        String?
+  parentId    String?
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  listings Listing[]
+
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Tag {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  slug      String       @unique
+  createdAt DateTime     @default(now())
+
+  listings  ListingTag[]
+
+  @@index([slug])
+}
+
+model ListingTag {
+  listingId String
+  tagId     String
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([listingId, tagId])
+}
+
+// ============================================================
+// LISTINGS
+// ============================================================
+
+model Listing {
+  id              String        @id @default(cuid())
+  sellerId        String
+  type            ListingType
+  title           String
+  slug            String        @unique
+  description     String        @db.Text
+  categoryId      String
+  status          ListingStatus @default(DRAFT)
+  rejectionReason String?
+  price           Decimal?      @db.Decimal(10, 2)
+  rating          Float?
+  reviewCount     Int           @default(0)
+  viewCount       Int           @default(0)
+  orderCount      Int           @default(0)
+  faq             Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  seller          SellerProfile       @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  category        Category            @relation(fields: [categoryId], references: [id])
+  packages        ServicePackage[]
+  images          ListingImage[]
+  tags            ListingTag[]
+  productFiles    DigitalProductFile[]
+  reviews         Review[]
+  orderItems      OrderItem[]
+  cartItems       CartItem[]
+
+  @@index([slug])
+  @@index([sellerId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ServicePackage {
+  id           String      @id @default(cuid())
+  listingId    String
+  tier         PackageTier
+  name         String
+  description  String      @db.Text
+  price        Decimal     @db.Decimal(10, 2)
+  deliveryDays Int
+  revisions    Int         @default(0)
+  features     Json
+  sortOrder    Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  listing    Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+
+  @@index([listingId])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  listingId String
+  url       String
+  s3Key     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+}
+
+model DigitalProductFile {
+  id        String   @id @default(cuid())
+  listingId String
+  fileName  String
+  fileSize  Int
+  fileType  String
+  s3Key     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  listing        Listing         @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  downloadTokens DownloadToken[]
+
+  @@index([listingId])
+}
+
+// ============================================================
+// CART
+// ============================================================
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  packageId String?
+  addOns    Json?
+  createdAt DateTime @default(now())
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  package ServicePackage? @relation(fields: [packageId], references: [id])
+
+  @@unique([userId, listingId, packageId])
+  @@index([userId])
+}
+
+// ============================================================
+// ORDERS
+// ============================================================
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  buyerId         String
+  status          OrderStatus @default(PENDING)
+  totalAmount     Decimal     @db.Decimal(10, 2)
+  platformFee     Decimal     @db.Decimal(10, 2)
+  stripeSessionId String?     @unique
+  stripePaymentId String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+
+  buyer    User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  items    OrderItem[]
+  payments Payment[]
+  dispute  Dispute?
+
+  @@index([buyerId])
+  @@index([orderNumber])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id             String      @id @default(cuid())
+  orderId        String
+  listingId      String
+  sellerId       String
+  type           ListingType
+  packageId      String?
+  addOns         Json?
+  title          String
+  price          Decimal     @db.Decimal(10, 2)
+  platformFee    Decimal     @db.Decimal(10, 2)
+  status         OrderStatus @default(PENDING)
+  deliveryDays   Int?
+  revisionsLeft  Int?
+  deliveryDueAt  DateTime?
+  deliveredAt    DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  order          Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  listing        Listing            @relation(fields: [listingId], references: [id])
+  seller         SellerProfile      @relation("SellerOrderItems", fields: [sellerId], references: [id])
+  package        ServicePackage?    @relation(fields: [packageId], references: [id])
+  messages       OrderMessage[]
+  deliverables   OrderDeliverable[]
+  downloadTokens DownloadToken[]
+  review         Review?
+  dispute        Dispute?           @relation("OrderItemDispute")
+
+  @@index([orderId])
+  @@index([sellerId])
+  @@index([status])
+  @@index([listingId])
+}
+
+model OrderMessage {
+  id              String   @id @default(cuid())
+  orderItemId     String
+  senderId        String
+  body            String   @db.Text
+  attachments     Json?
+  isSystemMessage Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  sender    User      @relation(fields: [senderId], references: [id])
+
+  @@index([orderItemId])
+  @@index([createdAt])
+}
+
+model OrderDeliverable {
+  id          String   @id @default(cuid())
+  orderItemId String
+  fileName    String
+  fileSize    Int
+  fileType    String
+  s3Key       String
+  message     String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([orderItemId])
+}
+
+model DownloadToken {
+  id            String   @id @default(cuid())
+  orderItemId   String
+  fileId        String
+  userId        String
+  token         String   @unique
+  downloadCount Int      @default(0)
+  maxDownloads  Int      @default(5)
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  orderItem OrderItem          @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  file      DigitalProductFile @relation(fields: [fileId], references: [id])
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ============================================================
+// PAYMENTS
+// ============================================================
+
+model Payment {
+  id              String        @id @default(cuid())
+  orderId         String
+  stripePaymentId String        @unique
+  amount          Decimal       @db.Decimal(10, 2)
+  platformFee     Decimal       @db.Decimal(10, 2)
+  currency        String        @default("usd")
+  status          PaymentStatus @default(PENDING)
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model Payout {
+  id             String       @id @default(cuid())
+  sellerId       String
+  amount         Decimal      @db.Decimal(10, 2)
+  currency       String       @default("usd")
+  stripePayoutId String?
+  status         PayoutStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  completedAt    DateTime?
+
+  seller SellerProfile @relation(fields: [sellerId], references: [id])
+
+  @@index([sellerId])
+  @@index([status])
+}
+
+// ============================================================
+// REVIEWS
+// ============================================================
+
+model Review {
+  id             String    @id @default(cuid())
+  listingId      String
+  orderItemId    String    @unique
+  buyerId        String
+  rating         Int
+  comment        String    @db.Text
+  sellerResponse String?   @db.Text
+  respondedAt    DateTime?
+  isVisible      Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  listing   Listing   @relation(fields: [listingId], references: [id])
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id])
+  buyer     User      @relation(fields: [buyerId], references: [id])
+
+  @@index([listingId])
+  @@index([buyerId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// ============================================================
+// DISPUTES
+// ============================================================
+
+model Dispute {
+  id           String            @id @default(cuid())
+  orderId      String            @unique
+  orderItemId  String            @unique
+  buyerId      String
+  sellerId     String
+  reason       String
+  description  String            @db.Text
+  status       DisputeStatus     @default(OPEN)
+  resolution   DisputeResolution?
+  resolvedBy   String?
+  resolvedAt   DateTime?
+  refundAmount Decimal?          @db.Decimal(10, 2)
+  adminNotes   String?           @db.Text
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  order     Order         @relation(fields: [orderId], references: [id])
+  orderItem OrderItem     @relation("OrderItemDispute", fields: [orderItemId], references: [id])
+  seller    SellerProfile @relation("SellerDisputes", fields: [sellerId], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+
+model AdminLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String
+  targetType String
+  targetId   String
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}

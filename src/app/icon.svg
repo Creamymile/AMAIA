@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f0f1a"/>
+      <stop offset="100%" stop-color="#1a1035"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="100" y1="80" x2="400" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="50%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="256" y1="120" x2="256" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#c4b5fd"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- Neural node dots -->
+  <circle cx="128" cy="128" r="8" fill="#818cf8" opacity="0.3"/>
+  <circle cx="384" cy="128" r="6" fill="#a78bfa" opacity="0.25"/>
+  <circle cx="128" cy="384" r="6" fill="#a78bfa" opacity="0.25"/>
+  <circle cx="384" cy="384" r="8" fill="#818cf8" opacity="0.3"/>
+  <!-- Subtle connection lines -->
+  <line x1="128" y1="128" x2="256" y2="200" stroke="#818cf8" stroke-width="1.5" opacity="0.15"/>
+  <line x1="384" y1="128" x2="256" y2="200" stroke="#a78bfa" stroke-width="1.5" opacity="0.15"/>
+  <line x1="128" y1="384" x2="256" y2="340" stroke="#a78bfa" stroke-width="1.5" opacity="0.15"/>
+  <line x1="384" y1="384" x2="256" y2="340" stroke="#818cf8" stroke-width="1.5" opacity="0.15"/>
+  <!-- The A letterform -->
+  <path d="M256 120 L160 392 L192 392 L214 332 L298 332 L320 392 L352 392 L256 120Z M226 300 L256 220 L286 300Z" fill="url(#accent)"/>
+  <!-- Glow ring around A -->
+  <circle cx="256" cy="256" r="160" stroke="url(#glow)" stroke-width="2" fill="none" opacity="0.4"/>
+  <!-- Sparkle accent top-right of A -->
+  <path d="M340 148 L344 136 L348 148 L360 152 L348 156 L344 168 L340 156 L328 152Z" fill="#c4b5fd" opacity="0.7"/>
+</svg>
