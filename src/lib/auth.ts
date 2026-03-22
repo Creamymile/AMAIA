@@ -4,6 +4,7 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -16,7 +17,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      allowDangerousEmailAccountLinking: true,
+      allowDangerousEmailAccountLinking: false,
     }),
     Credentials({
       name: "credentials",
@@ -24,13 +25,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
         const email = credentials.email as string;
         const password = credentials.password as string;
+
+        // Rate limit: 10 login attempts per email per 15 minutes
+        const { success: withinLimit } = checkRateLimit(`login:${email.toLowerCase()}`, 10);
+        if (!withinLimit) {
+          throw new Error("Too many login attempts. Please try again later.");
+        }
 
         const user = await db.user.findUnique({
           where: { email: email.toLowerCase() },

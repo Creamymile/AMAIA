@@ -1,8 +1,10 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { signIn } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   registerSchema,
   type RegisterInput,
@@ -13,6 +15,14 @@ export async function registerAction(
   input: RegisterInput
 ): Promise<ActionResult<{ userId: string }>> {
   try {
+    // Rate limit: 5 registrations per IP per 15 minutes
+    const headersList = await headers();
+    const ip = headersList.get("x-forwarded-for") ?? "unknown";
+    const { success: withinLimit } = checkRateLimit(`register:${ip}`, 5);
+    if (!withinLimit) {
+      return { success: false, error: "Too many attempts. Please try again later." };
+    }
+
     const data = registerSchema.parse(input);
 
     // Check if email already exists

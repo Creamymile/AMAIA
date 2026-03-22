@@ -77,12 +77,12 @@ export default async function ListingPage({ params }: ListingPageProps) {
   );
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col overflow-x-hidden">
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 w-full overflow-x-hidden">
         {/* Breadcrumbs */}
         <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
-          <nav className="flex items-center gap-1 text-sm text-muted-foreground">
+          <nav className="flex items-center gap-1 text-sm text-muted-foreground overflow-x-auto whitespace-nowrap pb-1">
             <Link href="/" className="hover:text-foreground transition-colors">
               Home
             </Link>
@@ -151,7 +151,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
                   </Badge>
                   <Badge variant="outline">{listing.category.name}</Badge>
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl break-words">
                   {listing.title}
                 </h1>
                 <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -177,9 +177,9 @@ export default async function ListingPage({ params }: ListingPageProps) {
 
               {/* Seller Card */}
               <div className="rounded-xl border p-4">
-                <div className="flex items-center gap-4">
-                  <Link href={`/seller/${listing.seller.slug}`}>
-                    <Avatar className="h-12 w-12">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <Link href={`/seller/${listing.seller.slug}`} className="shrink-0">
+                    <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
                       <AvatarImage
                         src={listing.seller.user.image ?? undefined}
                         alt={listing.seller.user.name ?? ""}
@@ -190,14 +190,21 @@ export default async function ListingPage({ params }: ListingPageProps) {
                     </Avatar>
                   </Link>
                   <div className="flex-1 min-w-0">
-                    <Link
-                      href={`/seller/${listing.seller.slug}`}
-                      className="font-semibold hover:underline"
-                    >
-                      {listing.seller.storeName ?? listing.seller.user.name}
-                    </Link>
+                    <div className="flex items-center justify-between gap-2">
+                      <Link
+                        href={`/seller/${listing.seller.slug}`}
+                        className="font-semibold hover:underline truncate"
+                      >
+                        {listing.seller.storeName ?? listing.seller.user.name}
+                      </Link>
+                      <Button variant="outline" size="sm" asChild className="shrink-0 hidden sm:inline-flex">
+                        <Link href={`/seller/${listing.seller.slug}`}>
+                          View Profile
+                        </Link>
+                      </Button>
+                    </div>
                     {listing.seller.bio && (
-                      <p className="text-sm text-muted-foreground truncate">
+                      <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
                         {listing.seller.bio}
                       </p>
                     )}
@@ -215,12 +222,12 @@ export default async function ListingPage({ params }: ListingPageProps) {
                         {listing.seller.completedOrders} orders completed
                       </span>
                     </div>
+                    <Button variant="outline" size="sm" asChild className="w-full mt-3 sm:hidden">
+                      <Link href={`/seller/${listing.seller.slug}`}>
+                        View Profile
+                      </Link>
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/seller/${listing.seller.slug}`}>
-                      View Profile
-                    </Link>
-                  </Button>
                 </div>
               </div>
 
@@ -229,12 +236,9 @@ export default async function ListingPage({ params }: ListingPageProps) {
               {/* Description */}
               <div>
                 <h2 className="text-lg font-semibold mb-4">About This {isService ? "Service" : "Product"}</h2>
-                <div
-                  className="prose prose-sm max-w-none text-muted-foreground leading-relaxed"
-                  dangerouslySetInnerHTML={{
-                    __html: listing.description ?? "",
-                  }}
-                />
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap break-words">
+                  {listing.description}
+                </p>
               </div>
 
               {/* Tags */}
@@ -369,7 +373,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
                           <TabsTrigger
                             key={pkg.tier}
                             value={pkg.tier.toLowerCase()}
-                            className="flex-1 rounded-none py-3 text-sm font-medium data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
+                            className="flex-1 rounded-none py-3 text-xs sm:text-sm font-medium data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
                           >
                             {pkg.tier.charAt(0) +
                               pkg.tier.slice(1).toLowerCase()}

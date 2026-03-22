@@ -46,7 +46,13 @@
       "Bash(find /Users/macbook/amaia -type f -name .env*)",
       "Bash(grep -v \"^$\")",
       "Bash(openssl rand:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(echo \"ADMIN_EMAIL is: $ADMIN_EMAIL\")",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_sM7SOCwyB8Ym@ep-icy-hill-a7evli7i-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx prisma db push)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_sM7SOCwyB8Ym@ep-icy-hill-a7evli7i-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" ADMIN_EMAIL=\"admin@amaia.com\" ADMIN_PASSWORD=\"admin123456\" npx prisma db seed)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_sM7SOCwyB8Ym@ep-icy-hill-a7evli7i-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx prisma db seed)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_sM7SOCwyB8Ym@ep-icy-hill-a7evli7i-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" ADMIN_EMAIL=\"admin@amaia.com\" ADMIN_PASSWORD=\"admin123456\" npx tsx prisma/seed.ts)",
+      "Bash(ls -la /Users/macbook/amaia/src/app/\\\\\\(buyer\\\\\\)/dashboard/)"
     ]
   }
 }
