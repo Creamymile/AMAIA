@@ -43,7 +43,10 @@
       "Bash(psql -d amaia -c \"SELECT id, \"\"storeName\"\", slug FROM \"\"SellerProfile\"\" WHERE \"\"userId\"\" = \\(SELECT id FROM \"\"User\"\" WHERE email = ''tester@amaia.com''\\);\")",
       "Bash(npx ts-node --compiler-options '{\"\"module\"\":\"\"commonjs\"\"}' -e \":*)",
       "Bash(node -e \":*)",
-      "Bash(find /Users/macbook/amaia -type f -name .env*)"
+      "Bash(find /Users/macbook/amaia -type f -name .env*)",
+      "Bash(grep -v \"^$\")",
+      "Bash(openssl rand:*)",
+      "Bash(xargs kill:*)"
     ]
   }
 }
